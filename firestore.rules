@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /transmissions/{postId} {
+      // anyone can read the feed
+      allow read: if true;
+
+      // anyone can post, but only a well-formed, size-capped post
+      allow create: if request.resource.data.keys().hasOnly(['text', 'createdAt'])
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() <= 2000
+                    && request.resource.data.createdAt == request.time;
+
+      // no edits, ever
+      allow update: if false;
+
+      // deletes are allowed so the composer can prune old posts and keep
+      // only the latest N. NOTE: since this app has no login system, this
+      // rule can't tell "our cleanup code" apart from anyone else calling
+      // the SDK directly — it's an open permission. Fine for a low-stakes
+      // public feed; add Firebase Auth first if that's ever a concern.
+      allow delete: if true;
+    }
+  }
+}
